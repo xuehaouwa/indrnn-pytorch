@@ -11,6 +11,7 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 import torch.nn as nn
 import torch.utils.data as Data
+from tputils.evaluate.evaluator import get_ade, get_fde
 
 
 # build predictor
@@ -50,7 +51,7 @@ def main():
 
     if cuda:
         model.cuda()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0002)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
     # Train the model
     model.train()
@@ -77,6 +78,16 @@ def main():
                     epochs, np.mean(losses)))
         epochs += 1
 
+    model.eval()
+    test_input_data = Variable(torch.Tensor(test_input)).cuda()
+    predicted = model(test_input_data)
+
+    ADE = get_ade(predicted.data.cpu().numpy(), test_label, PREDICT_STEPS)
+    FDE = get_fde(predicted.data.cpu().numpy(), test_label)
+
+    print(ADE)
+    print(FDE)
+
 
 if __name__ == '__main__':
     torch.multiprocessing.set_start_method("spawn")
@@ -85,7 +96,7 @@ if __name__ == '__main__':
     TIME_STEPS = 20
     PREDICT_STEPS = 20
     RECURRENT_MAX = pow(2, 1 / TIME_STEPS)
-    epoch = 3
+    epoch = 300
     cuda = torch.cuda.is_available()
 
     # prepare data
